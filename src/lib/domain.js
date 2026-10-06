@@ -24,3 +24,22 @@ export function dateTimestamp(value){
  return value+'T00:00:00+07:00';
 }
 export function oldestFirst(a,b){const time=value=>{const n=Date.parse(value);return Number.isFinite(n)?n:Infinity};return time(a.created_at)-time(b.created_at)||a.name.localeCompare(b.name,'vi');}
+
+const clockParts = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+export function dateTimeInput(value){const day=dateInput(value);if(!day)return '';return `${day}T${clockParts.format(new Date(value))}`;}
+export function fmtDateTime(value){const text=dateTimeInput(value);return text?`${fmtDate(value)} ${text.slice(11)}`:'—';}
+export function dateTimeTimestamp(value){
+ if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))throw new Error('Ngày giờ challenge không hợp lệ.');
+ dateTimestamp(value.slice(0,10));
+ const timestamp=value+':00+07:00';
+ if(dateTimeInput(timestamp)!==value)throw new Error('Ngày giờ challenge không hợp lệ.');
+ return timestamp;
+}
+export function compareChallenges(a,b,key='created_at',direction='asc'){
+ const numberKeys=['created_at','est_earn','actual_earn','public_rank','private_rank'];
+ const value=c=>{const raw=c[key];if(raw==null||raw==='')return null;if(numberKeys.includes(key)){const n=key==='created_at'?Date.parse(raw):Number(raw);return Number.isFinite(n)?n:null;}return String(raw);};
+ const av=value(a),bv=value(b);
+ if(av===null&&bv!==null)return 1;if(bv===null&&av!==null)return -1;
+ const order=av===null?0:typeof av==='number'?av-bv:av.localeCompare(bv,'vi',{numeric:true,sensitivity:'base'});
+ return order*(direction==='desc'?-1:1)||oldestFirst(a,b);
+}

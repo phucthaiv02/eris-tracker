@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { best, challengeStatus, challengeValues, dateInput, dateTimestamp, fmtDate, oldestFirst, dateTimeInput, dateTimeTimestamp, fmtDateTime, compareChallenges } from '../src/lib/domain.js';
+import { best, challengeStatus, challengeValues, dateInput, dateTimestamp, fmtDate, oldestFirst, dateTimeInput, dateTimeTimestamp, fmtDateTime, compareChallenges, paginateChallenges } from '../src/lib/domain.js';
 const challenge=(statuses,extra={})=>({submissions:statuses.map(status=>({status,score:.5})),...extra});
 test('Pending or Approved passes; all Rejected fails; no submissions has no status',()=>{assert.equal(challengeStatus(challenge(['Rejected','Pending review'])),'Pass');assert.equal(challengeStatus(challenge(['Approved'])),'Pass');assert.equal(challengeStatus(challenge(['Rejected','Rejected'])),'Fail');assert.equal(challengeStatus(challenge([])),null)});
 test('Top leaderboard has priority and invalid/legacy overrides cannot mask review results',()=>{assert.equal(challengeStatus(challenge(['Rejected'],{private_rank:3})),'Top leaderboard');assert.equal(challengeStatus(challenge([],{status_override:'Top leaderboard'})),'Top leaderboard');assert.equal(challengeStatus(challenge(['Rejected'],{private_rank:4,status_override:'Pass'})),'Fail')});
@@ -45,4 +45,14 @@ test('Rank sorting uses numeric values and keeps unknown ranks last',()=>{
  assert.deepEqual(names('public_rank','desc'),['A','B','C']);
  assert.deepEqual(names('private_rank','asc'),['A','B','C']);
  assert.deepEqual(names('private_rank','desc'),['B','A','C']);
+});
+
+test('Pagination shows latest ten first, supports page sizes, clamps deleted pages and handles empty results',()=>{
+ const rows=Array.from({length:38},(_,i)=>({name:`Challenge ${i}`,created_at:new Date(Date.UTC(2026,9,1,0,i)).toISOString()})).sort((a,b)=>compareChallenges(a,b,'created_at','desc'));
+ const first=paginateChallenges(rows);assert.equal(first.rows.length,10);assert.equal(first.rows[0].name,'Challenge 37');assert.equal(first.totalPages,4);
+ const second=paginateChallenges(rows,2,10);assert.equal(second.rows[0].name,'Challenge 27');assert.equal(second.start,11);assert.equal(second.end,20);
+ const last=paginateChallenges(rows,4,10);assert.equal(last.rows.length,8);assert.equal(last.end,38);
+ for(const size of [10,20,50,100])assert.equal(paginateChallenges(rows,1,size).rows.length,Math.min(38,size));
+ const clamped=paginateChallenges(rows.slice(0,20),4,10);assert.equal(clamped.currentPage,2);assert.equal(clamped.rows.length,10);
+ const empty=paginateChallenges([],4,10);assert.equal(empty.currentPage,1);assert.equal(empty.totalPages,1);assert.equal(empty.start,0);assert.equal(empty.end,0);
 });

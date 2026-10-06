@@ -43,3 +43,9 @@ export function compareChallenges(a,b,key='created_at',direction='asc'){
  const order=av===null?0:typeof av==='number'?av-bv:av.localeCompare(bv,'vi',{numeric:true,sensitivity:'base'});
  return order*(direction==='desc'?-1:1)||oldestFirst(a,b);
 }
+
+export function paginateChallenges(rows,page=1,pageSize=10){
+ const total=rows.length,totalPages=Math.max(1,Math.ceil(total/pageSize));
+ const currentPage=Math.max(1,Math.min(page,totalPages)),offset=(currentPage-1)*pageSize;
+ return {rows:rows.slice(offset,offset+pageSize),total,totalPages,currentPage,offset,start:total?offset+1:0,end:Math.min(offset+pageSize,total)};
+}

@@ -8,7 +8,7 @@ Track personal ML challenges directly: Difficulty, Public/Private scores and bas
 
 For a new project, run `supabase/migrations/202610060001_initial.sql` first. For existing projects, keep the initial schema already installed.
 
-Then run **`supabase/challenge_results.sql` once in Supabase SQL Editor before deploying this UI**. The SQL transaction:
+Then run **`supabase/challenge_results.sql` once in Supabase SQL Editor, followed by **`supabase/compact_challenges.sql`**, before deploying this UI**. The SQL transaction:
 
 - Renames the old baseline to Public baseline.
 - Copies each old Best Score to Public score using its configured metric direction, including zero and rejected scores as before.
@@ -30,11 +30,13 @@ npm run dev
 
 ## UI
 
-Click a challenge name to edit it directly. Difficulty is optional free text (up to 80 characters). Scores, baselines, ranks and earnings can be left empty.
+Click a challenge name to edit it directly. Difficulty choices are Easy (green), Medium (yellow) and Hard (red); missing difficulty stays empty. Scores, baselines, ranks and earnings can be left empty.
 
 Dates are displayed and edited in Vietnam time. Unrelated form edits preserve the original timestamp, including seconds. The table defaults to newest first and ten rows per page, with 10/20/50/100 page-size options. Sorting supports name, date/time, type, difficulty, scores, baselines, earnings and ranks. Empty values stay last.
 
-Status can be selected manually as Top leaderboard, Pass or Fail. Automatic status first checks Private Rank 1–3, then compares a complete Private score/baseline pair, falling back to Public. The metric direction determines whether higher or lower scores pass; equality fails. Missing pairs or direction show “—”. Converted challenges retain their prior status until the user selects automatic mode.
+Status is selected manually as Top leaderboard, Pass or Fail. There is no automatic status option. The compact conversion SQL stores previously calculated statuses where possible; subsequent score/rank changes do not change the chosen status. Missing status stays empty.
+
+The compact table uses two header rows grouped into Public, Private and Earn. Dates display above times; decimal scores display at most three digits after the decimal point. Stored precision and form input values remain unchanged.
 
 JSON exports contain challenges only. The transactional importer is account-scoped and retry-safe via legacy IDs; it does not overwrite existing records. Old backups containing nested submission lists are rejected so their histories are not silently discarded. Existing database data should be converted with the SQL script above.
 

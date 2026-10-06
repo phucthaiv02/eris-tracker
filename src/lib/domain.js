@@ -1,20 +1,16 @@
 export const TYPE_COLORS={Tabular:['#e5efff','#2b69c7','#a2c1f5'],Classification:['#f0e7ff','#7945bf','#c8acf0'],Regression:['#eef0f3','#687481','#c3cad1'],NLP:['#e1f5e7','#258547','#9cdbaf'],'Computer Vision':['#def5f0','#148777','#8bd6c7'],'Object Detection':['#f2e4ff','#9143c2','#d5a6f0'],'Time Series':['#ffecd9','#be6417','#efba85'],Forecasting:['#fff2cc','#a97808','#e9cb76'],'Anomaly Detection':['#ffe5e3','#ba393c','#f0aaa6'],Recommendation:['#eef0f3','#687481','#c3cad1'],'Sequence To Sequence':['#ddf5eb','#148661','#87d7b9'],'Prompt Engineering':['#ffe4f0','#b6417c','#eda7ca'],RAG:['#def4fc','#1686a6','#89d3e8'],'Fine-Tuning':['#fff2cc','#a97808','#e9cb76'],'From Scratch':['#ffe5e3','#ba393c','#f0aaa6'],'LLM Evaluation':['#f0e7ff','#7945bf','#c8acf0'],Other:['#eef0f3','#687481','#c3cad1']};
 export const TYPES=Object.keys(TYPE_COLORS);
 export const METRICS=['AUC','Accuracy','F1','RMSE','MAE','Other'];
+export const DIFFICULTIES=['Easy','Medium','Hard'];
+export const DIFFICULTY_COLORS={Easy:['#dcf5e3','#227141','#a3dfb5'],Medium:['#fff0bb','#906000','#efd07a'],Hard:['#ffe2df','#b32e32','#f5aaa6']};
 export const CHALLENGE_STATUSES=['Top leaderboard','Pass','Fail'];
 export const STATUS_COLORS={'Top leaderboard':['#fff0bb','#906000','#efd07a'],Pass:['#dcf5e3','#227141','#a3dfb5'],Fail:['#ffe2df','#b32e32','#f5aaa6']};
 export function colorStyle(colors){const [backgroundColor,color,borderColor]=colors||['#f1f3f1','#68766b','#dce5dd'];return {backgroundColor,color,borderColor};}
-export const fmt=n=>n==null?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:6});
-export const money=n=>n==null?'—':'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
-export function challengeStatus(c){
- if(CHALLENGE_STATUSES.includes(c.status_override))return c.status_override;
- if(Number.isInteger(c.private_rank)&&c.private_rank>=1&&c.private_rank<=3)return 'Top leaderboard';
- const pair=c.private_score!=null&&c.private_baseline!=null?[c.private_score,c.private_baseline]:c.public_score!=null&&c.public_baseline!=null?[c.public_score,c.public_baseline]:null;
- if(!pair||!['asc','desc'].includes(c.direction))return null;
- return (c.direction==='asc'?pair[0]<pair[1]:pair[0]>pair[1])?'Pass':'Fail';
-}
+export const fmt=n=>n==null?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:3});
+export const money=n=>n==null?'—':'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:3});
+export function challengeStatus(c){return CHALLENGE_STATUSES.includes(c.status_override)?c.status_override:null;}
 export function optionalNumber(value){if(value===''||value==null)return null;const n=Number(value);if(!Number.isFinite(n))throw new Error('Điểm hoặc số tiền không hợp lệ.');return n;}
-export function challengeValues(v){const name=v.name.trim();if(!name)throw new Error('Nhập tên challenge.');const result={name,type:v.type,tags:[...new Set(v.tags.split(',').map(t=>t.trim()).filter(Boolean))],metric:v.metric,direction:v.direction||null,status_override:v.status_override||null,difficulty:v.difficulty?.trim()||null};for(const key of ['public_baseline','private_baseline','public_score','private_score','est_earn','actual_earn','public_rank','private_rank']){result[key]=optionalNumber(v[key]);if(['est_earn','actual_earn'].includes(key)&&result[key]!=null&&result[key]<0)throw new Error('Số tiền phải từ 0 trở lên.');if(['public_rank','private_rank'].includes(key)&&result[key]!=null&&(!Number.isInteger(result[key])||result[key]<1))throw new Error('Thứ hạng phải là số nguyên dương.');}if(result.direction&&!['asc','desc'].includes(result.direction))throw new Error('Chiều điểm không hợp lệ.');if(result.status_override&&!CHALLENGE_STATUSES.includes(result.status_override))throw new Error('Trạng thái không hợp lệ.');if(result.difficulty?.length>80)throw new Error('Difficulty tối đa 80 ký tự.');return result;}
+export function challengeValues(v){const name=v.name.trim();if(!name)throw new Error('Nhập tên challenge.');const result={name,type:v.type,tags:[...new Set(v.tags.split(',').map(t=>t.trim()).filter(Boolean))],metric:v.metric,direction:v.direction||null,status_override:v.status_override||null,difficulty:v.difficulty?.trim()||null};for(const key of ['public_baseline','private_baseline','public_score','private_score','est_earn','actual_earn','public_rank','private_rank']){result[key]=optionalNumber(v[key]);if(['est_earn','actual_earn'].includes(key)&&result[key]!=null&&result[key]<0)throw new Error('Số tiền phải từ 0 trở lên.');if(['public_rank','private_rank'].includes(key)&&result[key]!=null&&(!Number.isInteger(result[key])||result[key]<1))throw new Error('Thứ hạng phải là số nguyên dương.');}if(result.direction&&!['asc','desc'].includes(result.direction))throw new Error('Chiều điểm không hợp lệ.');if(result.status_override&&!CHALLENGE_STATUSES.includes(result.status_override))throw new Error('Trạng thái không hợp lệ.');if(result.difficulty&&!DIFFICULTIES.includes(result.difficulty))throw new Error('Difficulty phải là Easy, Medium hoặc Hard.');return result;}
 
 const dateParts = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'});
 export function dateInput(value){

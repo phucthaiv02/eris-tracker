@@ -1,16 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeStatus, challengeValues, dateInput, dateTimestamp, fmtDate, oldestFirst, dateTimeInput, dateTimeTimestamp, fmtDateTime, compareChallenges, paginateChallenges } from '../src/lib/domain.js';
-test('Challenge status uses manual choices, top ranks and score/baseline pairs',()=>{
- assert.equal(challengeStatus({private_rank:3}),'Top leaderboard');
+import { challengeStatus, challengeValues, dateInput, dateTimestamp, fmtDate, oldestFirst, dateTimeInput, dateTimeTimestamp, fmtDateTime, compareChallenges, paginateChallenges, fmt, DIFFICULTIES, DIFFICULTY_COLORS } from '../src/lib/domain.js';
+test('Challenge status is manual and no longer recalculated from scores or ranks',()=>{
+ assert.equal(challengeStatus({status_override:'Pass',private_score:0,private_baseline:1,direction:'desc'}),'Pass');
  assert.equal(challengeStatus({status_override:'Fail',private_rank:1}),'Fail');
- assert.equal(challengeStatus({public_score:.8,public_baseline:.7,direction:'desc'}),'Pass');
- assert.equal(challengeStatus({public_score:.7,public_baseline:.7,direction:'desc'}),'Fail');
- assert.equal(challengeStatus({public_score:.8,public_baseline:.7,private_score:.4,private_baseline:.5,direction:'desc'}),'Fail');
- assert.equal(challengeStatus({private_score:0,private_baseline:.1,direction:'asc'}),'Pass');
- assert.equal(challengeStatus({public_score:0,public_baseline:0,direction:'asc'}),'Fail');
- assert.equal(challengeStatus({public_score:.8,public_baseline:.7,direction:null}),null);
- assert.equal(challengeStatus({}),null);
+ assert.equal(challengeStatus({status_override:'Top leaderboard'}),'Top leaderboard');
+ assert.equal(challengeStatus({private_rank:1,public_score:.8,public_baseline:.7,direction:'desc'}),null);
 });
 test('Form conversion preserves null vs zero, cleans tags and validates ranks',()=>{const v={name:' Test ',tags:'a, b,a',type:'NLP',metric:'F1',direction:'desc',public_baseline:'0',private_baseline:'',public_score:'0',private_score:'',difficulty:' Medium ',est_earn:'',actual_earn:'0',public_rank:'',private_rank:'2',status_override:''};const c=challengeValues(v);assert.equal(c.public_baseline,0);assert.equal(c.public_score,0);assert.equal(c.private_baseline,null);assert.equal(c.private_score,null);assert.equal(c.difficulty,'Medium');assert.equal(c.est_earn,null);assert.equal(c.actual_earn,0);assert.deepEqual(c.tags,['a','b']);assert.throws(()=>challengeValues({...v,private_rank:'1.2'}));assert.throws(()=>challengeValues({...v,est_earn:'-1'}))});
 
@@ -68,4 +63,13 @@ test('Public/private scores sort numerically and missing values stay last',()=>{
  const rows=[{name:'A',public_score:10,private_score:0},{name:'B',public_score:2,private_score:1},{name:'C',public_score:null,private_score:null}];
  assert.deepEqual([...rows].sort((a,b)=>compareChallenges(a,b,'public_score','asc')).map(c=>c.name),['B','A','C']);
  assert.deepEqual([...rows].sort((a,b)=>compareChallenges(a,b,'private_score','desc')).map(c=>c.name),['B','A','C']);
+});
+
+test('Difficulty has three choices/colors and displayed scores round without changing stored precision',()=>{
+ assert.deepEqual(DIFFICULTIES,['Easy','Medium','Hard']);
+ assert.equal(DIFFICULTY_COLORS.Easy[1],'#227141');assert.equal(DIFFICULTY_COLORS.Medium[1],'#906000');assert.equal(DIFFICULTY_COLORS.Hard[1],'#b32e32');
+ assert.equal(fmt(.735897435897436),'0.736');assert.equal(fmt(0),'0');assert.equal(fmt(null),'—');
+ const value={name:'Test',type:'',tags:'',metric:'',direction:'',difficulty:'Extreme',status_override:''};
+ assert.throws(()=>challengeValues(value));
+ assert.equal(challengeValues({...value,difficulty:'Easy',public_score:'0.735897435897436'}).public_score,.735897435897436);
 });

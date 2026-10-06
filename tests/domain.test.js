@@ -1,11 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { best, challengeStatus, challengeValues, dateInput, dateTimestamp, fmtDate, oldestFirst, dateTimeInput, dateTimeTimestamp, fmtDateTime, compareChallenges, paginateChallenges } from '../src/lib/domain.js';
-const challenge=(statuses,extra={})=>({submissions:statuses.map(status=>({status,score:.5})),...extra});
-test('Pending or Approved passes; all Rejected fails; no submissions has no status',()=>{assert.equal(challengeStatus(challenge(['Rejected','Pending review'])),'Pass');assert.equal(challengeStatus(challenge(['Approved'])),'Pass');assert.equal(challengeStatus(challenge(['Rejected','Rejected'])),'Fail');assert.equal(challengeStatus(challenge([])),null)});
-test('Top leaderboard has priority and invalid/legacy overrides cannot mask review results',()=>{assert.equal(challengeStatus(challenge(['Rejected'],{private_rank:3})),'Top leaderboard');assert.equal(challengeStatus(challenge([],{status_override:'Top leaderboard'})),'Top leaderboard');assert.equal(challengeStatus(challenge(['Rejected'],{private_rank:4,status_override:'Pass'})),'Fail')});
-test('Best Score respects direction and includes zero',()=>{const c={submissions:[{score:.7},{score:0},{score:.4}]};assert.equal(best({...c,direction:'asc'}),0);assert.equal(best({...c,direction:'desc'}),.7);assert.equal(best({submissions:[]}),null)});
-test('Form conversion preserves null vs zero, cleans tags and validates ranks',()=>{const v={name:' Test ',tags:'a, b,a',type:'NLP',metric:'F1',direction:'desc',baseline:'0',est_earn:'',actual_earn:'0',public_rank:'',private_rank:'2',status_override:''};const c=challengeValues(v);assert.equal(c.baseline,0);assert.equal(c.est_earn,null);assert.equal(c.actual_earn,0);assert.deepEqual(c.tags,['a','b']);assert.throws(()=>challengeValues({...v,private_rank:'1.2'}));assert.throws(()=>challengeValues({...v,est_earn:'-1'}))});
+import { challengeStatus, challengeValues, dateInput, dateTimestamp, fmtDate, oldestFirst, dateTimeInput, dateTimeTimestamp, fmtDateTime, compareChallenges, paginateChallenges } from '../src/lib/domain.js';
+test('Challenge status uses manual choices, top ranks and score/baseline pairs',()=>{
+ assert.equal(challengeStatus({private_rank:3}),'Top leaderboard');
+ assert.equal(challengeStatus({status_override:'Fail',private_rank:1}),'Fail');
+ assert.equal(challengeStatus({public_score:.8,public_baseline:.7,direction:'desc'}),'Pass');
+ assert.equal(challengeStatus({public_score:.7,public_baseline:.7,direction:'desc'}),'Fail');
+ assert.equal(challengeStatus({public_score:.8,public_baseline:.7,private_score:.4,private_baseline:.5,direction:'desc'}),'Fail');
+ assert.equal(challengeStatus({private_score:0,private_baseline:.1,direction:'asc'}),'Pass');
+ assert.equal(challengeStatus({public_score:0,public_baseline:0,direction:'asc'}),'Fail');
+ assert.equal(challengeStatus({public_score:.8,public_baseline:.7,direction:null}),null);
+ assert.equal(challengeStatus({}),null);
+});
+test('Form conversion preserves null vs zero, cleans tags and validates ranks',()=>{const v={name:' Test ',tags:'a, b,a',type:'NLP',metric:'F1',direction:'desc',public_baseline:'0',private_baseline:'',public_score:'0',private_score:'',difficulty:' Medium ',est_earn:'',actual_earn:'0',public_rank:'',private_rank:'2',status_override:''};const c=challengeValues(v);assert.equal(c.public_baseline,0);assert.equal(c.public_score,0);assert.equal(c.private_baseline,null);assert.equal(c.private_score,null);assert.equal(c.difficulty,'Medium');assert.equal(c.est_earn,null);assert.equal(c.actual_earn,0);assert.deepEqual(c.tags,['a','b']);assert.throws(()=>challengeValues({...v,private_rank:'1.2'}));assert.throws(()=>challengeValues({...v,est_earn:'-1'}))});
 
 test('Vietnam dates round-trip, retain calendar boundaries and sort oldest first',()=>{
  assert.equal(dateInput('2026-10-05T17:00:00Z'),'2026-10-06');
@@ -55,4 +62,10 @@ test('Pagination shows latest ten first, supports page sizes, clamps deleted pag
  for(const size of [10,20,50,100])assert.equal(paginateChallenges(rows,1,size).rows.length,Math.min(38,size));
  const clamped=paginateChallenges(rows.slice(0,20),4,10);assert.equal(clamped.currentPage,2);assert.equal(clamped.rows.length,10);
  const empty=paginateChallenges([],4,10);assert.equal(empty.currentPage,1);assert.equal(empty.totalPages,1);assert.equal(empty.start,0);assert.equal(empty.end,0);
+});
+
+test('Public/private scores sort numerically and missing values stay last',()=>{
+ const rows=[{name:'A',public_score:10,private_score:0},{name:'B',public_score:2,private_score:1},{name:'C',public_score:null,private_score:null}];
+ assert.deepEqual([...rows].sort((a,b)=>compareChallenges(a,b,'public_score','asc')).map(c=>c.name),['B','A','C']);
+ assert.deepEqual([...rows].sort((a,b)=>compareChallenges(a,b,'private_score','desc')).map(c=>c.name),['B','A','C']);
 });

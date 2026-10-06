@@ -10,3 +10,17 @@ export function best(c){const scores=(c.submissions||[]).map(s=>Number(s.score))
 export function challengeStatus(c){if(c.status_override==='Top leaderboard'||Number.isInteger(c.private_rank)&&c.private_rank>=1&&c.private_rank<=3)return 'Top leaderboard';const submissions=c.submissions||[];if(!submissions.length)return null;return submissions.every(s=>s.status==='Rejected')?'Fail':'Pass';}
 export function optionalNumber(value){if(value===''||value==null)return null;const n=Number(value);if(!Number.isFinite(n))throw new Error('Điểm hoặc số tiền không hợp lệ.');return n;}
 export function challengeValues(v){const name=v.name.trim();if(!name)throw new Error('Nhập tên challenge.');const result={name,type:v.type,tags:[...new Set(v.tags.split(',').map(t=>t.trim()).filter(Boolean))],metric:v.metric,direction:v.direction,status_override:v.status_override||null};for(const key of ['baseline','est_earn','actual_earn','public_rank','private_rank']){result[key]=optionalNumber(v[key]);if(['est_earn','actual_earn'].includes(key)&&result[key]!=null&&result[key]<0)throw new Error('Số tiền phải từ 0 trở lên.');if(['public_rank','private_rank'].includes(key)&&result[key]!=null&&(!Number.isInteger(result[key])||result[key]<1))throw new Error('Thứ hạng phải là số nguyên dương.');}return result;}
+
+const dateParts = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'});
+export function dateInput(value){
+ if(!value)return '';
+ const date=new Date(value);if(!Number.isFinite(date.getTime()))return '';
+ const parts=Object.fromEntries(dateParts.formatToParts(date).map(p=>[p.type,p.value]));
+ return `${parts.year}-${parts.month}-${parts.day}`;
+}
+export function fmtDate(value){const date=dateInput(value);if(!date)return '—';return date.split('-').reverse().join('/');}
+export function dateTimestamp(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||new Date(value+'T00:00:00Z').toISOString().slice(0,10)!==value)throw new Error('Ngày challenge không hợp lệ.');
+ return value+'T00:00:00+07:00';
+}
+export function oldestFirst(a,b){const time=value=>{const n=Date.parse(value);return Number.isFinite(n)?n:Infinity};return time(a.created_at)-time(b.created_at)||a.name.localeCompare(b.name,'vi');}
